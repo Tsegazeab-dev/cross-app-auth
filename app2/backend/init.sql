@@ -1,0 +1,23 @@
+CREATE DATABASE IF NOT EXISTS app2;
+
+USE app2;
+
+CREATE TABLE IF NOT EXISTS parents (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  name       VARCHAR(100)  NOT NULL,
+  email      VARCHAR(150)  NOT NULL UNIQUE,
+  password   VARCHAR(255)  NOT NULL,
+  created_at TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS children (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  parent_id  INT           NOT NULL,
+  first_name VARCHAR(100)  NOT NULL,
+  last_name  VARCHAR(100)  NOT NULL,
+  username   VARCHAR(150)  NOT NULL UNIQUE,
+  pin        VARCHAR(255)  NOT NULL,
+  pin_plain  CHAR(6)       NOT NULL,
+  created_at TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (parent_id) REFERENCES parents(id) ON DELETE CASCADE
+);
