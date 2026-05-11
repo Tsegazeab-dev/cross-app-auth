@@ -3,11 +3,18 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 const { db, connectDB } = require("./config/db");
 
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: "http://localhost:5174" }));
+app.use(cookieParser());
+app.use(
+  cors({
+    origin: "http://localhost:5174",
+    credentials: true, // Allow cookies to be sent
+  }),
+);
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -215,7 +222,7 @@ app.get("/api/child/me", authenticateChild, (req, res) => {
   res.json({ user: req.user });
 });
 
-// SSO handoff — issue a short-lived bridge token for auth-app
+// SSO handoff — issue a short-lived bridge token as a secure cookie
 app.post("/api/child/sso-token", authenticateChild, async (req, res) => {
   try {
     const [rows] = await db.query(
@@ -243,7 +250,18 @@ app.post("/api/child/sso-token", authenticateChild, async (req, res) => {
       { expiresIn: "30s" },
     );
 
-    res.json({ ssoToken });
+    // Set secure cookie for the parent domain
+    res.cookie("sso_bridge_token", ssoToken, {
+      httpOnly: true, // Prevents JavaScript access
+      secure: process.env.NODE_ENV === "production", // HTTPS only in production
+      sameSite: "lax", // Allows cross-subdomain but not cross-site
+      domain:
+        process.env.NODE_ENV === "production" ? ".evangadi.com" : "localhost", // Share across subdomains
+      maxAge: 30000, // 30 seconds
+      path: "/", // Available across all paths
+    });
+
+    res.json({ success: true, message: "SSO token set" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });

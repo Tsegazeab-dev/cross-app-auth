@@ -71,10 +71,12 @@ export default function ChildHome() {
       const res = await fetch("http://localhost:5001/api/child/sso-token", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
+        credentials: "include", // Include cookies in request
       });
       const data = await res.json();
       if (!res.ok) return setSsoError(data.message);
-      window.location.href = `http://localhost:5173/sso?token=${data.ssoToken}`;
+      // Cookie is now set, redirect to Academy SSO page without token in URL
+      window.location.href = "http://localhost:5173/sso";
     } catch {
       setSsoError("Failed to connect to Academy. Try again.");
     } finally {

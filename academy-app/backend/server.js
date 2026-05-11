@@ -3,11 +3,18 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 const { db, connectDB } = require("./config/db");
 
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: ["http://localhost:5173", "http://localhost:5174"] }));
+app.use(cookieParser());
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "http://localhost:5174"],
+    credentials: true, // Allow cookies to be sent
+  }),
+);
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = "2m";
@@ -91,9 +98,9 @@ app.get("/api/me", authenticate, (req, res) => {
   res.json({ user: req.user });
 });
 
-// SSO login — accepts a bridge token signed with SSO_BRIDGE_SECRET
+// SSO login — reads bridge token from secure cookie
 app.post("/api/sso/login", async (req, res) => {
-  const { token } = req.body;
+  const token = req.cookies?.sso_bridge_token;
   if (!token) return res.status(400).json({ message: "SSO token required" });
 
   let payload;
@@ -132,6 +139,17 @@ app.post("/api/sso/login", async (req, res) => {
       { expiresIn: JWT_EXPIRES_IN },
     );
 
+    // Clear the bridge token cookie after use
+    res.clearCookie("sso_bridge_token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      domain:
+        process.env.NODE_ENV === "production" ? ".evangadi.com" : "localhost",
+      path: "/",
+    });
+
+    // Return token in response body (same as normal login)
     res.json({
       token: sessionToken,
       user: { id: user.id, name: user.name, email: user.email },

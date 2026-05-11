@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function SSOLogin() {
@@ -7,18 +7,11 @@ export default function SSOLogin() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-
-    if (!token) {
-      setError("No SSO token found in URL.");
-      return;
-    }
-
+    // No token in URL - the cookie is automatically sent with the request
     fetch("http://localhost:5000/api/sso/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
+      credentials: "include", // Include cookies in request
     })
       .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
       .then(({ ok, data }) => {
@@ -31,7 +24,7 @@ export default function SSOLogin() {
       .catch((err) => {
         setError(err.message || "Something went wrong. Please try again.");
       });
-  }, []);
+  }, [navigate]);
 
   return (
     <div style={s.container}>
